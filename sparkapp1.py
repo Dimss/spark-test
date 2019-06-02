@@ -15,7 +15,7 @@ df = sqlContext.createDataFrame(counts)
 df.write.mode("append").format("json").save("hdfs://172.20.10.5:9000/user/dima/res10.json")
 df.show()
 print("========= Loaded from HDFS =============")
-# Load DataFrame from HDFS1
+# Load DataFrame from HDFS
 sparkSession = SparkSession.builder.appName("example-pyspark-read-and-write").getOrCreate()
 df_load = sparkSession.read.json('hdfs://172.20.10.5:9000/user/dima/res10.json')
 df_load.show()
