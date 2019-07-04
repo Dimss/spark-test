@@ -14,6 +14,12 @@ bin/spark-submit \
     --name spark-k8s-test \
     --conf spark.executor.instances=1\
     --conf spark.kubernetes.namespace=nemo \
+    --conf spark.dynamicAllocation.initialExecutors=1 \
+    --conf spark.dynamicAllocation.enabled=true \
+    --conf spark.shuffle.service.enabled=true \
+    --conf spark.kubernetes.node.selector.test=hw \
+    --conf spark.kubernetes.shuffle.namespace=nemo \
+    --conf spark.kubernetes.shuffle.labels="app=spark-shuffle" \
     --conf spark.kubernetes.container.image=dimssss/spark-py:v2.4.3-v2 \
     /tmp/sparkapp1.py
 
@@ -22,9 +28,10 @@ bin/spark-submit \
     --master k8s://https://ocp-local:8443 \
     --deploy-mode cluster \
     --name spark-k8s-test \
-    --conf spark.executor.instances=3\
+    --conf spark.executor.instances=3 \
     --conf spark.kubernetes.container.image=dimssss/spark-py:v2.4.3-v2 \
     /tmp/sparkapp1.py
+
 
 
 # RUN script from HDFS
