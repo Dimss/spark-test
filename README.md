@@ -19,15 +19,27 @@ oc new-project spark
 ``` 
 
 ```bash
+# Add node selector for spark workers on the namespace level
+oc edit namespace spark 
+apiVersion: project.openshift.io/v1
+kind: Project
+metadata:
+  annotations:
+    openshift.io/node-selector: purpose=spark
+    ...
+
+```
+
+```bash
 # Check if any limits are configured by default for the spark project  
 oc get limits
 # Delete any defined limits (for POC there is no need to limit CPU/Memory of workers pods) 
-oc delete limits limits
+oc delete limits core-resource-limits
 ```    
 
 ```bash
 # To keep things simple for a POC, allow executing Spark application with anyuid policy   
-
+oc adm policy add-scc-to-user anyuid -z default -n spark
 ```
 
 ```bash
@@ -35,7 +47,7 @@ oc delete limits limits
 apiVersion: authorization.openshift.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: spark-default-sa-nemo
+  name: spark-default-sa-spark
 roleRef:
   name: cluster-admin
 subjects:
@@ -55,34 +67,44 @@ cd /path/to/your/spark/installation
 # Run without dynamic allocation
 cd /path/to/your/spark/installation 
 bin/spark-submit \
-    --master k8s://${OCP-API-URL} \
+    --master k8s://https://${CLUSTER_URL}:8443 \
     --deploy-mode cluster \
     --name spark-k8s-test \
+    --conf spark.kubernetes.namespace=spark \
     --conf spark.executor.instances=3 \
-    --conf spark.kubernetes.container.image=dimssss/spark-py:v2.4.3-v2 \
+    --conf spark.kubernetes.container.image=${DOCKER_IMAGES}/spark-py:v2.4.3-v3 \
     /tmp/sparkapp1.py
 
 ```  
 
 ```bash
 # Run with dynamic allocation
+# Please note, current method doesn't supported yet by Spark. It's here only as an example.
+# See the following Spark open issue: https://issues.apache.org/jira/browse/SPARK-24432
+
+# Frist you've to build docker image and deploy External Shuffle service
+cd shuffle
+# Build shuffle docker
+docker build -t your-shuffle-docker .
+# Deploy shuffle service
+oc create -f dep.yaml 
+
+# Second execute the spark apps
 cd /path/to/your/spark/installation 
 bin/spark-submit \
-    --master k8s://${OCP-API-URL} \
+    --master k8s://https://${CLUSTER_URL}:8443 \
     --deploy-mode cluster \
     --name spark-k8s-test \
-    --conf spark.kubernetes.namespace=nemo \
+    --conf spark.kubernetes.namespace=spark \
     --conf spark.dynamicAllocation.initialExecutors=1 \
     --conf spark.dynamicAllocation.enabled=true \
     --conf spark.shuffle.service.enabled=true \
-    --conf spark.kubernetes.node.selector.test=hw \
-    --conf spark.kubernetes.shuffle.namespace=nemo \
+    --conf spark.kubernetes.shuffle.namespace=spark \
     --conf spark.kubernetes.shuffle.labels="app=spark-shuffle" \
-    --conf spark.kubernetes.container.image=dimssss/spark-py:v2.4.3-v2 \
+    --conf spark.kubernetes.container.image=${DOCKER_IMAGES}/spark-py:v2.4.3-v3 \
     /tmp/sparkapp1.py
 ```  
   
-
 
 
 
